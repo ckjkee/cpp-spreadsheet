@@ -20,6 +20,7 @@ public:
     std::string GetText() const override;
     std::vector<Position> GetReferencedCells() const override;
 
+   
     bool IsReferenced() const;
 
 private:
@@ -28,9 +29,17 @@ private:
     class TextImpl;
     class FormulaImpl;
 
-    std::unique_ptr<Impl> impl_;
+    void InvalidateCache();
 
-    // Добавьте поля и методы для связи с таблицей, проверки циклических 
-    // зависимостей, графа зависимостей и т. д.
+    void InvalidateCell();
+
+    bool IsCached() const;
+
+    bool IsCyclicDependent(const Impl& new_impl) const;
+
+    Sheet& sheet_;
+    std::unique_ptr<Impl> impl_;
+    std::unordered_set<Cell*> left_nodes_;
+    std::unordered_set<Cell*> right_nodes_;
 
 };
