@@ -27,6 +27,8 @@ public:
 
     bool IsCellValid(Position pos) const;
 
+    void CheckPos(Position pos) const;
+
 private:    
     Table table_;
 };

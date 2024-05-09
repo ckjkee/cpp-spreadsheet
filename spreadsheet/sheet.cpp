@@ -14,32 +14,19 @@ Sheet::~Sheet() {}
 
 void Sheet::SetCell(Position pos, std::string text)
 {
-    if (!pos.IsValid())
+    CheckPos(pos);
+    table_.resize(std::max(pos.row + 1, int(std::size(table_))));
+    table_[pos.row].resize(std::max(pos.col + 1, int(std::size(table_))));
+    if (!table_[pos.row][pos.col])
     {
-        throw InvalidPositionException("Invalid pos");
+        table_[pos.row][pos.col] = std::make_unique<Cell>(*this);
     }
-    else
-    {
-        table_.resize(std::max(pos.row + 1, int(std::size(table_))));
-        table_[pos.row].resize(std::max(pos.col + 1, int(std::size(table_))));
-
-        if (!table_[pos.row][pos.col])
-        {
-            table_[pos.row][pos.col] = std::make_unique<Cell>(*this);
-        }
-
-        table_[pos.row][pos.col]->Set(text);
-    }
-
+    table_[pos.row][pos.col]->Set(text);
 }
 
 const CellInterface* Sheet::GetCell(Position pos) const
 {
-    if (!pos.IsValid())
-    {
-        throw InvalidPositionException("Invalid pos");
-    }
-
+    CheckPos(pos);
     if (IsCellValid(pos))
     {
         if (table_[pos.row][pos.col])
@@ -52,36 +39,26 @@ const CellInterface* Sheet::GetCell(Position pos) const
 
 CellInterface* Sheet::GetCell(Position pos)
 {
-    if (!pos.IsValid())
+    CheckPos(pos);
+    if (IsCellValid(pos))
     {
-        throw InvalidPositionException("Invalid pos");
-    }
-    
-        if (IsCellValid(pos))
+        if (table_[pos.row][pos.col])
         {
-            if (table_[pos.row][pos.col])
-            {
-                return table_[pos.row][pos.col].get();
-            }            
+            return table_[pos.row][pos.col].get();
         }
-        return nullptr;
+    }
+    return nullptr;
 }
 
 
 void Sheet::ClearCell(Position pos)
 {
-    if (!pos.IsValid())
+    CheckPos(pos);
+    if (IsCellValid(pos))
     {
-        throw InvalidPositionException("Invalid pos");
-    }
-    else
-    {
-        if (IsCellValid(pos))
+        if (table_[pos.row][pos.col])
         {
-            if (table_[pos.row][pos.col])
-            {
-                table_[pos.row][pos.col].reset();
-            }
+            table_[pos.row][pos.col].reset();
         }
     }
 }
@@ -89,22 +66,18 @@ void Sheet::ClearCell(Position pos)
 Size Sheet::GetPrintableSize() const
 {
     Size result{ 0, 0 };
-
-    for (int i = 0; i < int(table_.size()); ++i)
+    for (size_t i = 0; i < table_.size(); ++i)
     {
-        for (int j = int(table_[i].size() - 1); j >= 0; --j)
+        for (size_t j = 0; j < table_[i].size(); ++j)
         {
             if (table_[i][j])
             {
-                if (table_[i][j].get()->GetText().empty())
+                if (table_[i][j]->GetText().empty())
                 {
                     continue;
-                }
-                else
-                {
-                    result.rows = std::max(result.rows, i + 1);
-                    result.cols = std::max(result.cols, j + 1);
-                }
+                }  
+                result.rows = std::max(size_t(result.rows), i + 1);
+                result.cols = std::max(size_t(result.cols), j + 1);
             }
         }
     }
@@ -112,17 +85,18 @@ Size Sheet::GetPrintableSize() const
     return result;
 }
 
+
 void Sheet::PrintValues(std::ostream& output) const
 {
-    for (int i = 0; i < GetPrintableSize().rows; ++i)
+    for (size_t i = 0; i < size_t(GetPrintableSize().rows); ++i)
     {
-        for (int j = 0; j < GetPrintableSize().cols; ++j)
+        for (size_t j = 0; j < size_t(GetPrintableSize().cols); ++j)
         {
             if (j > 0)
             {
                 output << '\t';
             }
-            if (j < int(table_[i].size()))
+            if (j < table_[i].size())
             {
                 if (table_[i][j])
                 {
@@ -136,15 +110,15 @@ void Sheet::PrintValues(std::ostream& output) const
 
 void Sheet::PrintTexts(std::ostream& output) const
 {
-    for (int i = 0; i < GetPrintableSize().rows; ++i)
+    for (size_t i = 0; i < size_t(GetPrintableSize().rows); ++i)
     {
-        for (int j = 0; j < GetPrintableSize().cols; ++j)
+        for (size_t j = 0; j < size_t(GetPrintableSize().cols); ++j)
         {
             if (j)
             {
                 output << '\t';
             }
-            if (j < int(table_[i].size()))
+            if (j < table_[i].size())
             {
                 if (table_[i][j])
                 {
@@ -159,6 +133,14 @@ void Sheet::PrintTexts(std::ostream& output) const
 bool Sheet::IsCellValid(Position pos) const
 {
     return pos.row < int(table_.size()) && pos.col < int(table_[pos.row].size());
+}
+
+void Sheet::CheckPos(Position pos) const
+{
+    if (!pos.IsValid())
+    {
+        throw InvalidPositionException("Invalid pos");
+    }
 }
 
 std::unique_ptr<SheetInterface> CreateSheet()

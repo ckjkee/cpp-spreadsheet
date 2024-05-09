@@ -19,8 +19,8 @@ public:
     Value GetValue() const override;
     std::string GetText() const override;
     std::vector<Position> GetReferencedCells() const override;
+    
 
-   
     bool IsReferenced() const;
 
 private:
@@ -36,6 +36,8 @@ private:
     bool IsCached() const;
 
     bool IsCyclicDependent(const Impl& new_impl) const;
+
+    void ValidateDependencies();
 
     Sheet& sheet_;
     std::unique_ptr<Impl> impl_;

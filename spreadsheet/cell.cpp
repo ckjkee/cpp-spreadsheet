@@ -24,19 +24,16 @@ protected:
 class Cell::EmptyImpl : public Impl {
 public:
 	EmptyImpl()
-	{
-		value_ = "";
-		text_ = "";
-	}
+	{}
 
 	Value GetValue() const
 	{
-		return value_;
+		return 0.0;
 	}
 
 	std::string GetText() const
 	{
-		return text_;
+		return "";
 	}
 };
 
@@ -87,7 +84,7 @@ public:
 		if (std::holds_alternative<double>(result))
 		{
 			cache_ = std::get<double>(result);
-			return cache_.value();
+			return std::get<double>(result);
 		}
 		else
 		{
@@ -103,11 +100,7 @@ public:
 
 	bool IIsCached() const override
 	{
-		if (cache_.has_value())
-		{
-			return true;
-		}
-		return false;
+		return cache_.has_value();
 	}
 
 	void IInvalidateCache() override
@@ -154,32 +147,15 @@ void Cell::Set(std::string text)
 		throw CircularDependencyException("Circ");
 	}
 
-	impl_ = std::move(new_impl);
+	impl_ = std::move(new_impl);	
 
-	for (Cell* right : right_nodes_)
-	{
-		right->left_nodes_.erase(this);
-	}
-
-	right_nodes_.clear();
-
-	for (const Position& pos : impl_->IGetReferencedCells())
-	{
-		Cell* right = static_cast<Cell*>(sheet_.GetCell(pos));
-		if (!right)
-		{
-			sheet_.SetCell(pos, "");			
-			right = static_cast<Cell*>(sheet_.GetCell(pos));
-		}
-		right_nodes_.insert(right);
-		right->left_nodes_.insert(this);
-	}
+	ValidateDependencies();
 	InvalidateCell();
 }
 
 void Cell::Clear()
 {
-	impl_ = std::make_unique<EmptyImpl>();
+	this->Set("");
 }
 
 Cell::Value Cell::GetValue() const
@@ -255,6 +231,30 @@ bool Cell::IsCyclicDependent(const Impl& new_impl) const
 
 	return false;
 }
+
+void Cell::ValidateDependencies()
+{
+	for (Cell* right : right_nodes_)
+	{
+		right->left_nodes_.erase(this);
+	}
+
+	right_nodes_.clear();
+
+	for (const Position& pos : impl_->IGetReferencedCells())
+	{
+		Cell* right = static_cast<Cell*>(sheet_.GetCell(pos));
+		if (!right)
+		{
+			sheet_.SetCell(pos, "");
+			right = static_cast<Cell*>(sheet_.GetCell(pos));
+		}
+		right_nodes_.insert(right);
+		right->left_nodes_.insert(this);
+	}
+}
+
+
 
 bool Cell::IsReferenced() const
 {
