@@ -87,7 +87,7 @@ public:
 		if (std::holds_alternative<double>(result))
 		{
 			cache_ = std::get<double>(result);
-			return std::get<double>(result);
+			return cache_.value();
 		}
 		else
 		{
